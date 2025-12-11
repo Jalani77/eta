@@ -40,14 +40,6 @@ app.use(
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/syllabus', syllabusRouter);
-app.use('/api/v1/grades', gradesRouter);
-app.use('/api/v1/classes', classesRouter);
-
-app.use(notFound);
-app.use(errorHandler);
-
 const port = Number(process.env.PORT ?? 3001);
 
 async function main() {
@@ -55,6 +47,14 @@ async function main() {
   const agenda = await createAgenda(process.env.MONGODB_URI);
 
   app.use(attachRequestContext({ agenda }));
+
+  app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/syllabus', syllabusRouter);
+  app.use('/api/v1/grades', gradesRouter);
+  app.use('/api/v1/classes', classesRouter);
+
+  app.use(notFound);
+  app.use(errorHandler);
 
   app.listen(port, () => {
     // eslint-disable-next-line no-console
