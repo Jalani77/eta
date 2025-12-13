@@ -27,6 +27,33 @@ class YiriApi {
     return _decode(res);
   }
 
+  Future<Map<String, dynamic>> me({required String token}) async {
+    final res = await http.get(
+      _u('/api/v1/auth/me'),
+      headers: {'authorization': 'Bearer $token'},
+    );
+    return _decode(res);
+  }
+
+  Future<Map<String, dynamic>> updateMe({
+    required String token,
+    String? phoneNumberE164,
+    double? goalFinalGrade,
+  }) async {
+    final res = await http.patch(
+      _u('/api/v1/users/me'),
+      headers: {
+        'content-type': 'application/json',
+        'authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        if (phoneNumberE164 != null) 'phoneNumberE164': phoneNumberE164,
+        if (goalFinalGrade != null) 'goalFinalGrade': goalFinalGrade,
+      }),
+    );
+    return _decode(res);
+  }
+
   Future<Map<String, dynamic>> listClasses({required String token}) async {
     final res = await http.get(
       _u('/api/v1/classes'),

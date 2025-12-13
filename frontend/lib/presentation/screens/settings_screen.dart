@@ -5,6 +5,7 @@ import '../../state/app_settings.dart';
 import '../../state/auth_state.dart';
 import '../../state/classes_state.dart';
 import '../../state/tab_state.dart';
+import '../../state/user_profile_state.dart';
 import '../theme/yiri_theme.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/section_header.dart';
@@ -20,6 +21,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _baseUrl = TextEditingController();
   final _goal = TextEditingController();
+  final _phone = TextEditingController();
 
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -36,6 +38,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final isIn = next.token != null;
       if (wasOut && isIn) {
         ref.read(classesProvider.notifier).refresh();
+        ref.read(userProfileProvider.notifier).refresh();
         ref.read(tabIndexProvider.notifier).state = 0;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Signed in. Dashboard is synced.')),
@@ -48,6 +51,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() {
     _baseUrl.dispose();
     _goal.dispose();
+    _phone.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -57,6 +61,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
     final auth = ref.watch(authProvider);
+    final profileState = ref.watch(userProfileProvider);
+    final profile = profileState.profile;
+
+    if (_phone.text.isEmpty && profile?.phoneNumberE164 != null) {
+      _phone.text = profile!.phoneNumberE164!;
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
@@ -143,6 +153,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ] else ...[
                   Text('Signed in as ${auth.email ?? '—'}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone number for reminders (E.164)',
+                      hintText: '+14155552671',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: profileState.busy
+                              ? null
+                              : () async {
+                                  final g = double.tryParse(_goal.text.trim());
+                                  final goalFinal = g ?? settings.goalFinalGrade;
+                                  await ref.read(userProfileProvider.notifier).update(
+                                        phoneNumberE164: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+                                        goalFinalGrade: goalFinal,
+                                      );
+                                  await ref.read(appSettingsProvider.notifier).setGoalFinalGrade(goalFinal);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Saved settings.')),
+                                    );
+                                  }
+                                },
+                          child: profileState.busy ? const Text('Saving…') : const Text('Save reminder settings'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (profileState.error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(profileState.error!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w700)),
+                  ],
                   const SizedBox(height: 10),
                   PrimaryButton(
                     label: 'Sign out',

@@ -33,14 +33,26 @@ export async function scheduleRemindersForClass({
       continue;
     }
 
-    await agenda.schedule(sendAt, 'sendReminderSms', {
+    const data = {
       userId,
       classId,
       toE164: phoneNumberE164,
       className,
       title: ev.title,
       dueAt: dueAt.toISOString(),
+    };
+
+    // Prevent duplicates on re-submit by ensuring uniqueness per (classId, to, title, dueAt).
+    const job = agenda.create('sendReminderSms', data);
+    job.unique({
+      name: 'sendReminderSms',
+      'data.classId': classId,
+      'data.toE164': phoneNumberE164,
+      'data.title': ev.title,
+      'data.dueAt': data.dueAt,
     });
+    job.schedule(sendAt);
+    await job.save();
 
     scheduled += 1;
   }

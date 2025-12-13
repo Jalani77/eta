@@ -15,6 +15,7 @@ import { authRouter } from './v1/routes/auth.routes.js';
 import { syllabusRouter } from './v1/routes/syllabus.routes.js';
 import { gradesRouter } from './v1/routes/grades.routes.js';
 import { classesRouter } from './v1/routes/classes.routes.js';
+import { usersRouter } from './v1/routes/users.routes.js';
 
 dotenv.config();
 
@@ -29,7 +30,8 @@ app.use(
     origin: env.CORS_ORIGIN === '*'
       ? '*'
       : env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean),
-    credentials: true,
+    // If you need cookies/credentials, set explicit origins (not '*').
+    credentials: env.CORS_ORIGIN !== '*',
   })
 );
 app.use(express.json({ limit: '8mb' }));
@@ -60,6 +62,7 @@ async function main() {
   app.use(attachRequestContext({ agenda }));
 
   app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/users', usersRouter);
   app.use('/api/v1/syllabus', syllabusRouter);
   app.use('/api/v1/grades', gradesRouter);
   app.use('/api/v1/classes', classesRouter);

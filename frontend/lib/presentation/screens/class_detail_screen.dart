@@ -263,9 +263,13 @@ class _GradesTab extends ConsumerWidget {
 
   Future<void> _showAddGrade(BuildContext context, WidgetRef ref, ClassSummary cls) async {
     final title = TextEditingController();
-    final category = TextEditingController(text: cls.categories.isNotEmpty ? cls.categories.first.name : 'Other');
     final earned = TextEditingController();
     final possible = TextEditingController(text: '100');
+
+    final categories = <String>[
+      ...cls.categories.map((c) => c.name),
+      'Other',
+    ];
 
     await showModalBottomSheet<void>(
       context: context,
@@ -275,89 +279,127 @@ class _GradesTab extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 18,
-            right: 18,
-            top: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Add grade', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 12),
-              TextField(controller: title, decoration: const InputDecoration(labelText: 'Title', hintText: 'Quiz 2')),
-              const SizedBox(height: 10),
-              TextField(
-                controller: category,
-                decoration: const InputDecoration(labelText: 'Category', hintText: 'Homework'),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: earned,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Score earned', hintText: '18'),
-                    ),
+        return Consumer(
+          builder: (ctx, ref, _) {
+            final busy = ref.watch(classesProvider).busy;
+            String selectedCategory = categories.isNotEmpty ? categories.first : 'Other';
+            String? errorText;
+
+            return StatefulBuilder(
+              builder: (ctx, setModalState) {
+                Future<void> save() async {
+                  final evTitle = title.text.trim().isEmpty ? 'Grade item' : title.text.trim();
+                  final e = double.tryParse(earned.text.trim());
+                  final p = double.tryParse(possible.text.trim());
+
+                  if (e == null || p == null) {
+                    setModalState(() => errorText = 'Enter valid numbers for earned and out of.');
+                    return;
+                  }
+                  if (p <= 0) {
+                    setModalState(() => errorText = '“Out of” must be greater than 0.');
+                    return;
+                  }
+                  if (e < 0 || e > p) {
+                    setModalState(() => errorText = 'Earned must be between 0 and $p.');
+                    return;
+                  }
+
+                  setModalState(() => errorText = null);
+
+                  await ref.read(classesProvider.notifier).addGrade(
+                        classId: cls.id,
+                        eventTitle: evTitle,
+                        category: selectedCategory.trim().isEmpty ? 'Other' : selectedCategory,
+                        earned: e,
+                        possible: p,
+                      );
+
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                }
+
+                return Padding(
+                  padding: EdgeInsets.only(
+                    left: 18,
+                    right: 18,
+                    top: 16,
+                    bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: possible,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Out of', hintText: '20'),
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Add grade', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: title,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(labelText: 'Title', hintText: 'Quiz 2'),
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: selectedCategory,
+                        items: categories
+                            .map((c) => DropdownMenuItem<String>(value: c, child: Text(c)))
+                            .toList(growable: false),
+                        onChanged: busy
+                            ? null
+                            : (v) => setModalState(() {
+                                  if (v != null) selectedCategory = v;
+                                }),
+                        decoration: const InputDecoration(labelText: 'Category'),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: earned,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'Score earned', hintText: '18'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: possible,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'Out of', hintText: '20'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (errorText != null) ...[
+                        const SizedBox(height: 10),
+                        Text(errorText!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w800)),
+                      ],
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: busy ? null : save,
+                          child: Text(busy ? 'Saving…' : 'Save'),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: busy ? null : () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    final evTitle = title.text.trim().isEmpty ? 'Grade item' : title.text.trim();
-                    final cat = category.text.trim().isEmpty ? 'Other' : category.text.trim();
-                    final e = double.tryParse(earned.text.trim());
-                    final p = double.tryParse(possible.text.trim());
-
-                    if (e == null || p == null || p <= 0) {
-                      Navigator.of(ctx).pop();
-                      return;
-                    }
-
-                    await ref.read(classesProvider.notifier).addGrade(
-                          classId: cls.id,
-                          eventTitle: evTitle,
-                          category: cat,
-                          earned: e,
-                          possible: p,
-                        );
-
-                    if (ctx.mounted) Navigator.of(ctx).pop();
-                  },
-                  child: const Text('Save'),
-                ),
-              ),
-              const SizedBox(height: 6),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Cancel'),
-                ),
-              ),
-            ],
-          ),
+                );
+              },
+            );
+          },
         );
       },
     );
 
     title.dispose();
-    category.dispose();
     earned.dispose();
     possible.dispose();
   }
