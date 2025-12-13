@@ -1,0 +1,31 @@
+# Node
+backend/node_modules/
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+backend/.env
+
+# Flutter / Dart
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/.pub-cache/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/ios/Pods/
+frontend/ios/.symlinks/
+frontend/ios/Flutter/Flutter.framework
+frontend/ios/Flutter/Flutter.podspec
+frontend/macos/Flutter/ephemeral/
+frontend/windows/flutter/ephemeral/
+frontend/linux/flutter/ephemeral/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
