@@ -16,6 +16,7 @@ import { syllabusRouter } from './v1/routes/syllabus.routes.js';
 import { gradesRouter } from './v1/routes/grades.routes.js';
 import { classesRouter } from './v1/routes/classes.routes.js';
 import { usersRouter } from './v1/routes/users.routes.js';
+import { metaRouter } from './v1/routes/meta.routes.js';
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ async function main() {
   app.use(attachRequestContext({ agenda }));
 
   app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/meta', metaRouter);
   app.use('/api/v1/users', usersRouter);
   app.use('/api/v1/syllabus', syllabusRouter);
   app.use('/api/v1/grades', gradesRouter);

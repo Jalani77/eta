@@ -8,6 +8,7 @@ import { scheduleRemindersForClass } from '../services/reminderScheduler.service
 import { User } from '../models/User.js';
 import { ClassModel } from '../models/Class.js';
 import { syllabusLimiter } from '../../shared/routeRateLimits.js';
+import { isValidE164 } from '../services/phone.util.js';
 
 export const syllabusRouter = express.Router();
 
@@ -27,7 +28,12 @@ syllabusRouter.post('/submit', requireAuthMiddleware, async (req, res, next) => 
     const user = await User.findById(userId);
     if (!user) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } });
 
-    if (body.phoneNumberE164) user.phoneNumberE164 = body.phoneNumberE164;
+    if (body.phoneNumberE164) {
+      if (!isValidE164(body.phoneNumberE164)) {
+        return res.status(400).json({ error: { code: 'INVALID_PHONE', message: 'Phone must be E.164 (e.g. +14155552671)' } });
+      }
+      user.phoneNumberE164 = body.phoneNumberE164;
+    }
 
     const classDoc = await ClassModel.create({
       userId,

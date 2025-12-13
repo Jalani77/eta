@@ -101,6 +101,67 @@ class ClassesController extends StateNotifier<ClassesState> {
     }
   }
 
+  Future<void> updateClass({
+    required String classId,
+    String? className,
+    double? assumedRemainingAverage,
+  }) async {
+    if (token == null) return;
+    state = state.copyWith(busy: true, error: null);
+    try {
+      final res = await api.patchClass(
+        token: token!,
+        classId: classId,
+        className: className,
+        assumedRemainingAverage: assumedRemainingAverage,
+      );
+      final updated = _toClass(res['class']);
+      state = state.copyWith(
+        busy: false,
+        classes: [
+          for (final c in state.classes) if (c.id == classId) updated else c,
+        ],
+        error: null,
+      );
+    } catch (e) {
+      state = state.copyWith(busy: false, error: e.toString());
+    }
+  }
+
+  Future<void> updateEvent({
+    required String classId,
+    required EventItem event,
+    String? category,
+    double? pointsPossible,
+  }) async {
+    if (token == null) return;
+    state = state.copyWith(busy: true, error: null);
+    try {
+      final res = await api.patchClassEvents(
+        token: token!,
+        classId: classId,
+        events: [
+          {
+            'title': event.title,
+            'dueAt': event.dueAt.toUtc().toIso8601String(),
+            if (category != null) 'category': category,
+            if (pointsPossible != null) 'pointsPossible': pointsPossible,
+          }
+        ],
+      );
+      final updated = _toClass(res['class']);
+      state = state.copyWith(
+        busy: false,
+        classes: [
+          for (final c in state.classes) if (c.id == classId) updated else c,
+        ],
+        error: null,
+      );
+    } catch (e) {
+      state = state.copyWith(busy: false, error: e.toString());
+    }
+  }
+
   ClassSummary _toClass(dynamic raw) {
     final m = raw as Map<String, dynamic>;
 
@@ -123,6 +184,7 @@ class ClassesController extends StateNotifier<ClassesState> {
             title: em['title']?.toString() ?? 'Event',
             dueAt: dueAt.toLocal(),
             category: em['category']?.toString(),
+            pointsPossible: (em['pointsPossible'] as num?)?.toDouble(),
           );
         })
         .toList();

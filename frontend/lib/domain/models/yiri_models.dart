@@ -23,8 +23,9 @@ class EventItem {
   final String title;
   final DateTime dueAt;
   final String? category;
+  final double? pointsPossible;
 
-  const EventItem({required this.title, required this.dueAt, this.category});
+  const EventItem({required this.title, required this.dueAt, this.category, this.pointsPossible});
 }
 
 class ClassSummary {

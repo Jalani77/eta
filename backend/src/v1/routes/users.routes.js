@@ -4,6 +4,7 @@ import { requireAuthMiddleware } from './middleware.auth.js';
 import { User } from '../models/User.js';
 import { UserUpdateSchema } from '../schemas/user.schemas.js';
 import { usersLimiter } from '../../shared/routeRateLimits.js';
+import { isValidE164 } from '../services/phone.util.js';
 
 export const usersRouter = express.Router();
 
@@ -18,6 +19,9 @@ usersRouter.patch('/me', requireAuthMiddleware, async (req, res, next) => {
     if (!user) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } });
 
     if (Object.prototype.hasOwnProperty.call(body, 'phoneNumberE164')) {
+      if (!isValidE164(body.phoneNumberE164 ?? null)) {
+        return res.status(400).json({ error: { code: 'INVALID_PHONE', message: 'Phone must be E.164 (e.g. +14155552671)' } });
+      }
       user.phoneNumberE164 = body.phoneNumberE164 ?? null;
     }
 

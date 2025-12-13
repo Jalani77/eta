@@ -127,6 +127,8 @@ class _OverviewTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentStr = snap.current == null ? '—' : '${snap.current!.toStringAsFixed(1)}%';
     final projectedStr = snap.projected == null ? '—' : '${snap.projected!.toStringAsFixed(1)}%';
+    final reqRemaining = snap.requiredAverageOnRemainingAssignments;
+    final nextEvent = _nextPointedEvent(cls);
 
     return ListView(
       children: [
@@ -152,11 +154,40 @@ class _OverviewTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      snap.requiredRemainingAverageForGoal == null
-                          ? 'Add rubric categories (via syllabus) and grades to unlock goal math.'
-                          : 'To hit ${goal.toStringAsFixed(0)}%, you need ~${snap.requiredRemainingAverageForGoal!.toStringAsFixed(1)}% on remaining categories.',
+                      reqRemaining != null
+                          ? 'To hit ${goal.toStringAsFixed(0)}%, you need about ${reqRemaining.toStringAsFixed(1)}% across your remaining assignments (with points entered).'
+                          : (snap.requiredRemainingAverageForGoal == null
+                              ? 'Add rubric categories (via syllabus) and grades to unlock goal math.'
+                              : 'To hit ${goal.toStringAsFixed(0)}%, you need ~${snap.requiredRemainingAverageForGoal!.toStringAsFixed(1)}% on remaining categories.'),
                       style: const TextStyle(color: YiriTheme.mutedText, height: 1.25),
                     ),
+                    if (reqRemaining != null && nextEvent != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Next assignment target', style: TextStyle(fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${nextEvent.title} • ${MaterialLocalizations.of(context).formatMediumDate(nextEvent.dueAt)}',
+                              style: const TextStyle(color: YiriTheme.mutedText, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Aim for ~${reqRemaining.toStringAsFixed(0)}% (≈ ${(reqRemaining / 100 * (nextEvent.pointsPossible ?? 0)).toStringAsFixed(0)} of ${(nextEvent.pointsPossible ?? 0).toStringAsFixed(0)} points).',
+                              style: const TextStyle(color: YiriTheme.mutedText, height: 1.25, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -207,6 +238,17 @@ class _OverviewTab extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  EventItem? _nextPointedEvent(ClassSummary cls) {
+    final now = DateTime.now();
+    final upcoming = cls.events
+        .where((e) => e.dueAt.isAfter(now))
+        .where((e) => (e.pointsPossible ?? 0) > 0)
+        .toList(growable: false);
+    if (upcoming.isEmpty) return null;
+    upcoming.sort((a, b) => a.dueAt.compareTo(b.dueAt));
+    return upcoming.first;
   }
 }
 
@@ -271,6 +313,14 @@ class _GradesTab extends ConsumerWidget {
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => _editClass(context, ref, cls),
+                  child: const Text('Edit class'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () async {
                     final ok = await showDialog<bool>(
@@ -296,6 +346,98 @@ class _GradesTab extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _editClass(BuildContext context, WidgetRef ref, ClassSummary cls) async {
+    final name = TextEditingController(text: cls.className);
+    final assumed = TextEditingController(text: cls.assumedRemainingAverage.toStringAsFixed(0));
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: YiriTheme.pureWhite,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            String? error;
+            final busy = ref.watch(classesProvider).busy;
+
+            Future<void> save() async {
+              final newName = name.text.trim();
+              if (newName.isEmpty) {
+                setModalState(() => error = 'Class name is required.');
+                return;
+              }
+              final a = double.tryParse(assumed.text.trim());
+              if (a == null || a < 0 || a > 100) {
+                setModalState(() => error = 'Assumed average must be 0–100.');
+                return;
+              }
+              setModalState(() => error = null);
+
+              await ref.read(classesProvider.notifier).updateClass(
+                    classId: cls.id,
+                    className: newName,
+                    assumedRemainingAverage: a,
+                  );
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Edit class', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: name,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(labelText: 'Class name'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: assumed,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Assumed average for remaining work', hintText: '85'),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(error!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w800)),
+                  ],
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: busy ? null : save,
+                      child: Text(busy ? 'Saving…' : 'Save'),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: busy ? null : () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    name.dispose();
+    assumed.dispose();
   }
 
   Future<void> _showAddGrade(BuildContext context, WidgetRef ref, ClassSummary cls) async {
@@ -472,7 +614,7 @@ class _EventsTab extends StatelessWidget {
                 Column(
                   children: [
                     for (final e in cls.events.take(20)) ...[
-                      _EventRow(e: e),
+                      _EventRow(e: e, classId: cls.id),
                       const SizedBox(height: 10),
                     ]
                   ],
@@ -582,14 +724,21 @@ class _GradeRow extends StatelessWidget {
   }
 }
 
-class _EventRow extends StatelessWidget {
+class _EventRow extends ConsumerWidget {
   final EventItem e;
+  final String classId;
 
-  const _EventRow({required this.e});
+  const _EventRow({required this.e, required this.classId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final date = MaterialLocalizations.of(context).formatMediumDate(e.dueAt);
+    final subtitle = [
+      date,
+      if (e.category != null && e.category!.trim().isNotEmpty) '• ${e.category}',
+      if (e.pointsPossible != null) '• ${e.pointsPossible!.toStringAsFixed(0)} pts',
+    ].join(' ');
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -616,14 +765,109 @@ class _EventRow extends StatelessWidget {
               children: [
                 Text(e.title, style: const TextStyle(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
-                Text(date, style: const TextStyle(color: YiriTheme.mutedText, fontWeight: FontWeight.w700)),
+                Text(subtitle, style: const TextStyle(color: YiriTheme.mutedText, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
+          TextButton(
+            onPressed: () => _editEvent(context, ref),
+            child: const Text('Edit'),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _editEvent(BuildContext context, WidgetRef ref) async {
+    final categories = <String>[
+      ...ref.read(classesProvider).classes.firstWhere((c) => c.id == classId).categories.map((c) => c.name),
+      'Other',
+    ];
+    String selected = (e.category != null && e.category!.trim().isNotEmpty) ? e.category! : (categories.isNotEmpty ? categories.first : 'Other');
+    final points = TextEditingController(text: e.pointsPossible?.toStringAsFixed(0) ?? '');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: YiriTheme.pureWhite,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            String? error;
+            final busy = ref.watch(classesProvider).busy;
+
+            Future<void> save() async {
+              final p = points.text.trim().isEmpty ? null : double.tryParse(points.text.trim());
+              if (p != null && p <= 0) {
+                setModalState(() => error = 'Points possible must be greater than 0.');
+                return;
+              }
+              setModalState(() => error = null);
+
+              await ref.read(classesProvider.notifier).updateEvent(
+                    classId: classId,
+                    event: e,
+                    category: selected,
+                    pointsPossible: p,
+                  );
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Edit event', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selected,
+                    items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(growable: false),
+                    onChanged: busy ? null : (v) => setModalState(() => selected = v ?? selected),
+                    decoration: const InputDecoration(labelText: 'Category'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: points,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Points possible (optional)', hintText: '100'),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(error!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w800)),
+                  ],
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: busy ? null : save,
+                      child: Text(busy ? 'Saving…' : 'Save'),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: busy ? null : () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    points.dispose();
   }
 }
 

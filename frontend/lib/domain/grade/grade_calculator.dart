@@ -4,11 +4,13 @@ class GradeSnapshot {
   final double? current; // 0..100
   final double? projected; // 0..100
   final double? requiredRemainingAverageForGoal; // 0..100
+  final double? requiredAverageOnRemainingAssignments; // 0..100 (points-based, if available)
 
   const GradeSnapshot({
     required this.current,
     required this.projected,
     required this.requiredRemainingAverageForGoal,
+    required this.requiredAverageOnRemainingAssignments,
   });
 }
 
@@ -25,6 +27,7 @@ class GradeCalculator {
         current: current,
         projected: current,
         requiredRemainingAverageForGoal: null,
+        requiredAverageOnRemainingAssignments: null,
       );
     }
 
@@ -64,11 +67,93 @@ class GradeCalculator {
         ? ((goalFinalGrade * totalWeight) - knownWeighted) / unknownWeight
         : null;
 
+    final requiredOnRemaining = _requiredAverageOnRemainingAssignments(
+      cls: cls,
+      goalFinalGrade: goalFinalGrade,
+    );
+
     return GradeSnapshot(
       current: current?.clamp(0, 100),
       projected: projected.clamp(0, 100),
       requiredRemainingAverageForGoal: required?.clamp(0, 100),
+      requiredAverageOnRemainingAssignments: requiredOnRemaining?.clamp(0, 100),
     );
+  }
+
+  /// If future events have both `category` and `pointsPossible`, compute the single
+  /// uniform % score needed across ALL remaining assignments (points-based) to hit the goal.
+  ///
+  /// This is more actionable than category-only math: it answers “what % do I need on the rest?”
+  static double? _requiredAverageOnRemainingAssignments({
+    required ClassSummary cls,
+    required double goalFinalGrade,
+  }) {
+    final weights = cls.categories;
+    if (weights.isEmpty) return null;
+
+    final now = DateTime.now();
+    final remaining = cls.events
+        .where((e) => e.dueAt.isAfter(now))
+        .where((e) => e.category != null && e.category!.trim().isNotEmpty)
+        .where((e) => (e.pointsPossible ?? 0) > 0)
+        .toList(growable: false);
+    if (remaining.isEmpty) return null;
+
+    // Group grades by category for current E/P.
+    final earnedByCat = <String, double>{};
+    final possibleByCat = <String, double>{};
+    for (final g in cls.grades) {
+      final k = g.category.toLowerCase();
+      earnedByCat[k] = (earnedByCat[k] ?? 0) + g.earned;
+      possibleByCat[k] = (possibleByCat[k] ?? 0) + g.possible;
+    }
+
+    // Remaining possible points by category.
+    final remPossibleByCat = <String, double>{};
+    for (final e in remaining) {
+      final k = e.category!.toLowerCase();
+      remPossibleByCat[k] = (remPossibleByCat[k] ?? 0) + (e.pointsPossible ?? 0);
+    }
+
+    double totalWeight = 0;
+    double A = 0; // constant term
+    double B = 0; // coefficient of s
+
+    for (final cw in weights) {
+      final w = cw.weight;
+      if (w <= 0) continue;
+      totalWeight += w;
+
+      final k = cw.name.toLowerCase();
+      final Ei = earnedByCat[k] ?? 0;
+      final Pi = possibleByCat[k] ?? 0;
+      final Ri = remPossibleByCat[k] ?? 0;
+
+      // If we don't know remaining points for this category, fall back to category-level assumption.
+      // This keeps the output conservative but still useful.
+      if (Ri <= 0) {
+        final assumed = cls.assumedRemainingAverage;
+        A += w * assumed;
+        continue;
+      }
+
+      final denom = Pi + Ri;
+      if (denom <= 0) {
+        // No current points and only remaining points -> category percent becomes s.
+        B += w * 1.0;
+        continue;
+      }
+
+      // finalPercent_i = 100*(Ei/denom) + s*(Ri/denom)
+      A += w * (100.0 * (Ei / denom));
+      B += w * (Ri / denom);
+    }
+
+    if (totalWeight <= 0) return null;
+    if (B <= 0) return null;
+
+    final s = ((goalFinalGrade * totalWeight) - A) / B;
+    return s;
   }
 
   static double? _categoryAverage(List<GradeItem> items) {

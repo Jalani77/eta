@@ -110,6 +110,42 @@ class YiriApi {
     _decode(res); // throw if error
   }
 
+  Future<Map<String, dynamic>> patchClass({
+    required String token,
+    required String classId,
+    String? className,
+    double? assumedRemainingAverage,
+  }) async {
+    final res = await http.patch(
+      _u('/api/v1/classes/$classId'),
+      headers: {
+        'content-type': 'application/json',
+        'authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        if (className != null) 'className': className,
+        if (assumedRemainingAverage != null) 'assumedRemainingAverage': assumedRemainingAverage,
+      }),
+    );
+    return _decode(res);
+  }
+
+  Future<Map<String, dynamic>> patchClassEvents({
+    required String token,
+    required String classId,
+    required List<Map<String, dynamic>> events,
+  }) async {
+    final res = await http.patch(
+      _u('/api/v1/classes/$classId/events'),
+      headers: {
+        'content-type': 'application/json',
+        'authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'events': events}),
+    );
+    return _decode(res);
+  }
+
   Map<String, dynamic> _decode(http.Response res) {
     final body = res.body.isEmpty ? '{}' : res.body;
     final decoded = jsonDecode(body) as Map<String, dynamic>;
