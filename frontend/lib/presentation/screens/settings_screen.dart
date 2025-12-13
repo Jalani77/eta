@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_settings.dart';
 import '../../state/auth_state.dart';
+import '../../state/classes_state.dart';
+import '../../state/tab_state.dart';
 import '../theme/yiri_theme.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/section_header.dart';
 import '../widgets/yiri_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -27,6 +30,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.read(appSettingsProvider);
     _baseUrl.text = settings.baseUrl;
     _goal.text = settings.goalFinalGrade.toStringAsFixed(0);
+
+    ref.listen<AuthState>(authProvider, (prev, next) {
+      final wasOut = prev?.token == null;
+      final isIn = next.token != null;
+      if (wasOut && isIn) {
+        ref.read(classesProvider.notifier).refresh();
+        ref.read(tabIndexProvider.notifier).state = 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Signed in. Dashboard is synced.')),
+        );
+      }
+    });
   }
 
   @override
@@ -47,13 +62,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
       child: ListView(
         children: [
-          Row(
-            children: const [
-              _AccentBar(),
-              SizedBox(width: 10),
-              Text('Settings', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-            ],
-          ),
+          const SectionHeader(title: 'Settings'),
           const SizedBox(height: 14),
 
           YiriCard(
@@ -154,22 +163,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(color: Color(0xFF6B7280), height: 1.25),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AccentBar extends StatelessWidget {
-  const _AccentBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 6,
-      height: 26,
-      decoration: BoxDecoration(
-        color: YiriTheme.yiriRed,
-        borderRadius: BorderRadius.circular(20),
       ),
     );
   }

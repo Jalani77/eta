@@ -19,10 +19,19 @@ class GradeItem {
   });
 }
 
+class EventItem {
+  final String title;
+  final DateTime dueAt;
+  final String? category;
+
+  const EventItem({required this.title, required this.dueAt, this.category});
+}
+
 class ClassSummary {
   final String id;
   final String className;
   final List<CategoryWeight> categories;
+  final List<EventItem> events;
   final List<GradeItem> grades;
   final double assumedRemainingAverage;
 
@@ -30,6 +39,7 @@ class ClassSummary {
     required this.id,
     required this.className,
     required this.categories,
+    required this.events,
     required this.grades,
     required this.assumedRemainingAverage,
   });

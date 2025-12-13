@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../state/auth_state.dart';
 import '../../state/syllabus_state.dart';
+import '../../state/tab_state.dart';
 import '../theme/yiri_theme.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/empty_state_card.dart';
+import '../widgets/section_header.dart';
 import '../widgets/yiri_card.dart';
 
 class SyllabusInputScreen extends ConsumerStatefulWidget {
@@ -31,24 +35,27 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(syllabusProvider);
+    final auth = ref.watch(authProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
       child: ListView(
         children: [
-          Row(
-            children: const [
-              _AccentBar(),
-              SizedBox(width: 10),
-              Text('Syllabus', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Paste your syllabus text. Yiri will extract weights + dates and schedule reminders 24h before due dates.',
-            style: TextStyle(color: YiriTheme.mutedText, height: 1.25),
+          const SectionHeader(
+            title: 'Syllabus',
+            subtitle: 'Paste your syllabus text. Yiri extracts weights + dates and schedules reminders 24h before due dates.',
           ),
           const SizedBox(height: 14),
+          if (auth.token == null) ...[
+            EmptyStateCard(
+              icon: Icons.lock_outline,
+              title: 'Sign in first',
+              message: 'To submit a syllabus and schedule reminders, create an account in Settings and sign in.',
+              ctaLabel: 'Go to Settings',
+              onCta: () => ref.read(tabIndexProvider.notifier).state = 2,
+            ),
+            const SizedBox(height: 14),
+          ],
           YiriCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,7 +102,9 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
                 PrimaryButton(
                   label: 'Submit syllabus',
                   busy: state.busy,
-                  onPressed: () {
+                  onPressed: auth.token == null
+                      ? null
+                      : () {
                     final assumed = double.tryParse(_assumed.text.trim()) ?? 85;
                     ref.read(syllabusProvider.notifier).submit(
                           className: _className.text.trim(),
@@ -125,22 +134,6 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
             style: TextStyle(color: Color(0xFF6B7280), height: 1.25),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _AccentBar extends StatelessWidget {
-  const _AccentBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 6,
-      height: 26,
-      decoration: BoxDecoration(
-        color: YiriTheme.yiriRed,
-        borderRadius: BorderRadius.circular(20),
       ),
     );
   }

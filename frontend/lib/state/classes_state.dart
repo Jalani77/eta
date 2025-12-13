@@ -56,6 +56,36 @@ class ClassesController extends StateNotifier<ClassesState> {
     }
   }
 
+  Future<void> addGrade({
+    required String classId,
+    required String eventTitle,
+    required String category,
+    required double earned,
+    required double possible,
+  }) async {
+    if (token == null) return;
+    state = state.copyWith(busy: true, error: null);
+
+    try {
+      final res = await api.updateGrades(token: token!, classId: classId, grades: [
+        {
+          'eventTitle': eventTitle,
+          'category': category,
+          'scoreEarned': earned,
+          'scorePossible': possible,
+        }
+      ]);
+
+      final updated = _toClass(res['class']);
+      final next = [
+        for (final c in state.classes) if (c.id == classId) updated else c,
+      ];
+      state = state.copyWith(busy: false, classes: next, error: null);
+    } catch (e) {
+      state = state.copyWith(busy: false, error: e.toString());
+    }
+  }
+
   ClassSummary _toClass(dynamic raw) {
     final m = raw as Map<String, dynamic>;
 
@@ -65,6 +95,19 @@ class ClassesController extends StateNotifier<ClassesState> {
           return CategoryWeight(
             name: cm['name']?.toString() ?? 'Category',
             weight: (cm['weight'] as num?)?.toDouble() ?? 0,
+          );
+        })
+        .toList();
+
+    final events = (m['events'] as List<dynamic>? ?? const [])
+        .map((e) {
+          final em = e as Map<String, dynamic>;
+          final dueAtRaw = em['dueAt']?.toString() ?? '';
+          final dueAt = DateTime.tryParse(dueAtRaw) ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return EventItem(
+            title: em['title']?.toString() ?? 'Event',
+            dueAt: dueAt.toLocal(),
+            category: em['category']?.toString(),
           );
         })
         .toList();
@@ -85,6 +128,7 @@ class ClassesController extends StateNotifier<ClassesState> {
       id: m['id']?.toString() ?? '',
       className: m['className']?.toString() ?? 'Class',
       categories: categories,
+      events: events,
       grades: grades,
       assumedRemainingAverage: ((m['assumedRemainingAverage'] as num?)?.toDouble()) ?? 85,
     );

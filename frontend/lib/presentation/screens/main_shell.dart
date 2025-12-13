@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dashboard_screen.dart';
 import 'settings_screen.dart';
 import 'syllabus_input_screen.dart';
 import '../theme/yiri_theme.dart';
 import '../widgets/yiri_scaffold.dart';
+import '../../state/tab_state.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
-  int _idx = 0;
-
+class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
+    final idx = ref.watch(tabIndexProvider);
     final pages = const [
       DashboardScreen(),
       SyllabusInputScreen(),
@@ -27,7 +28,7 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: YiriScaffold(
         child: SafeArea(
-          child: IndexedStack(index: _idx, children: pages),
+          child: IndexedStack(index: idx, children: pages),
         ),
       ),
       bottomNavigationBar: Container(
@@ -36,9 +37,9 @@ class _MainShellState extends State<MainShell> {
           border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
         ),
         child: NavigationBar(
-          selectedIndex: _idx,
+          selectedIndex: idx,
           indicatorColor: YiriTheme.yiriRed.withOpacity(0.10),
-          onDestinationSelected: (i) => setState(() => _idx = i),
+          onDestinationSelected: (i) => ref.read(tabIndexProvider.notifier).state = i,
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.dashboard_outlined),

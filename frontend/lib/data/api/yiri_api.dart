@@ -58,6 +58,22 @@ class YiriApi {
     return _decode(res);
   }
 
+  Future<Map<String, dynamic>> updateGrades({
+    required String token,
+    required String classId,
+    required List<Map<String, dynamic>> grades,
+  }) async {
+    final res = await http.post(
+      _u('/api/v1/grades/update'),
+      headers: {
+        'content-type': 'application/json',
+        'authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'classId': classId, 'grades': grades}),
+    );
+    return _decode(res);
+  }
+
   Map<String, dynamic> _decode(http.Response res) {
     final body = res.body.isEmpty ? '{}' : res.body;
     final decoded = jsonDecode(body) as Map<String, dynamic>;
