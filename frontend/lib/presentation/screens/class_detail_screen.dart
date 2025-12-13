@@ -257,6 +257,43 @@ class _GradesTab extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 14),
+        YiriCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Class actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 10),
+              const Text(
+                'Deleting a class removes its rubric, events, and grades from your account.',
+                style: TextStyle(color: YiriTheme.mutedText, height: 1.25),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (dctx) => AlertDialog(
+                        title: const Text('Delete class?'),
+                        content: Text('This will permanently delete “${cls.className}”.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                          FilledButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                        ],
+                      ),
+                    );
+                    if (ok != true) return;
+                    await ref.read(classesProvider.notifier).deleteClass(cls.id);
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                  child: const Text('Delete class'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

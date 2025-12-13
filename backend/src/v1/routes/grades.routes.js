@@ -3,8 +3,11 @@ import express from 'express';
 import { requireAuthMiddleware } from './middleware.auth.js';
 import { GradesUpdateSchema } from '../schemas/grades.schemas.js';
 import { ClassModel } from '../models/Class.js';
+import { gradesLimiter } from '../../shared/routeRateLimits.js';
 
 export const gradesRouter = express.Router();
+
+gradesRouter.use(gradesLimiter);
 
 gradesRouter.post('/update', requireAuthMiddleware, async (req, res, next) => {
   try {

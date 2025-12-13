@@ -7,8 +7,11 @@ import { ocrWithGoogleVisionBase64 } from '../services/visionOcr.service.js';
 import { scheduleRemindersForClass } from '../services/reminderScheduler.service.js';
 import { User } from '../models/User.js';
 import { ClassModel } from '../models/Class.js';
+import { syllabusLimiter } from '../../shared/routeRateLimits.js';
 
 export const syllabusRouter = express.Router();
+
+syllabusRouter.use(syllabusLimiter);
 
 syllabusRouter.post('/submit', requireAuthMiddleware, async (req, res, next) => {
   try {

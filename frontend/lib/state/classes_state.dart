@@ -86,6 +86,21 @@ class ClassesController extends StateNotifier<ClassesState> {
     }
   }
 
+  Future<void> deleteClass(String classId) async {
+    if (token == null) return;
+    state = state.copyWith(busy: true, error: null);
+    try {
+      await api.deleteClass(token: token!, classId: classId);
+      state = state.copyWith(
+        busy: false,
+        classes: state.classes.where((c) => c.id != classId).toList(growable: false),
+        error: null,
+      );
+    } catch (e) {
+      state = state.copyWith(busy: false, error: e.toString());
+    }
+  }
+
   ClassSummary _toClass(dynamic raw) {
     final m = raw as Map<String, dynamic>;
 

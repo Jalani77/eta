@@ -101,6 +101,15 @@ class YiriApi {
     return _decode(res);
   }
 
+  Future<void> deleteClass({required String token, required String classId}) async {
+    final res = await http.delete(
+      _u('/api/v1/classes/$classId'),
+      headers: {'authorization': 'Bearer $token'},
+    );
+    if (res.statusCode == 204) return;
+    _decode(res); // throw if error
+  }
+
   Map<String, dynamic> _decode(http.Response res) {
     final body = res.body.isEmpty ? '{}' : res.body;
     final decoded = jsonDecode(body) as Map<String, dynamic>;

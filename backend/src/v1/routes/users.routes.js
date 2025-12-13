@@ -3,8 +3,11 @@ import express from 'express';
 import { requireAuthMiddleware } from './middleware.auth.js';
 import { User } from '../models/User.js';
 import { UserUpdateSchema } from '../schemas/user.schemas.js';
+import { usersLimiter } from '../../shared/routeRateLimits.js';
 
 export const usersRouter = express.Router();
+
+usersRouter.use(usersLimiter);
 
 usersRouter.patch('/me', requireAuthMiddleware, async (req, res, next) => {
   try {

@@ -6,8 +6,11 @@ import { RegisterSchema, LoginSchema } from '../schemas/auth.schemas.js';
 import { hashPassword, verifyPassword } from '../services/password.service.js';
 import { signAccessToken, verifyAccessToken } from '../services/jwt.service.js';
 import { parseBearerToken } from './_util.js';
+import { authLimiter } from '../../shared/routeRateLimits.js';
 
 export const authRouter = express.Router();
+
+authRouter.use(authLimiter);
 
 authRouter.post('/register', async (req, res, next) => {
   try {
