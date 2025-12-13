@@ -22,6 +22,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _baseUrl = TextEditingController();
   final _goal = TextEditingController();
   final _phone = TextEditingController();
+  final _cutA = TextEditingController();
+  final _cutB = TextEditingController();
+  final _cutC = TextEditingController();
 
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -32,6 +35,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.read(appSettingsProvider);
     _baseUrl.text = settings.baseUrl;
     _goal.text = settings.goalFinalGrade.toStringAsFixed(0);
+    _cutA.text = settings.aCutoff.toStringAsFixed(0);
+    _cutB.text = settings.bCutoff.toStringAsFixed(0);
+    _cutC.text = settings.cCutoff.toStringAsFixed(0);
 
     ref.listen<AuthState>(authProvider, (prev, next) {
       final wasOut = prev?.token == null;
@@ -52,6 +58,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _baseUrl.dispose();
     _goal.dispose();
     _phone.dispose();
+    _cutA.dispose();
+    _cutB.dispose();
+    _cutC.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -100,6 +109,85 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Text(
                   'Current goal: ${settings.goalFinalGrade.toStringAsFixed(0)}%',
                   style: const TextStyle(color: YiriTheme.mutedText, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 12),
+                const Text('Letter grade cutoffs', style: TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _cutA,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'A cutoff', hintText: '90'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: _cutB,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'B cutoff', hintText: '80'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: _cutC,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'C cutoff', hintText: '70'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () async {
+                          final a = double.tryParse(_cutA.text.trim());
+                          final b = double.tryParse(_cutB.text.trim());
+                          final c = double.tryParse(_cutC.text.trim());
+                          await ref.read(appSettingsProvider.notifier).setLetterCutoffs(a: a, b: b, c: c);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved cutoffs.')));
+                          }
+                        },
+                        child: const Text('Save cutoffs'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () async {
+                        await ref.read(appSettingsProvider.notifier).setGoalFromLetter('A');
+                        _goal.text = ref.read(appSettingsProvider).goalFinalGrade.toStringAsFixed(0);
+                      },
+                      child: Text('Target A (${settings.aCutoff.toStringAsFixed(0)}%)'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () async {
+                        await ref.read(appSettingsProvider.notifier).setGoalFromLetter('B');
+                        _goal.text = ref.read(appSettingsProvider).goalFinalGrade.toStringAsFixed(0);
+                      },
+                      child: Text('Target B (${settings.bCutoff.toStringAsFixed(0)}%)'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () async {
+                        await ref.read(appSettingsProvider.notifier).setGoalFromLetter('C');
+                        _goal.text = ref.read(appSettingsProvider).goalFinalGrade.toStringAsFixed(0);
+                      },
+                      child: Text('Target C (${settings.cCutoff.toStringAsFixed(0)}%)'),
+                    ),
+                  ],
                 ),
               ],
             ),

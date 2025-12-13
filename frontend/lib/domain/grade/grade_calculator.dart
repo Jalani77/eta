@@ -80,6 +80,41 @@ class GradeCalculator {
     );
   }
 
+  /// After scoring `nextEvent` with `scorePercent`, compute the new required
+  /// average across the *remaining assignments after that*.
+  static double? requiredAverageAfterScoringNext({
+    required ClassSummary cls,
+    required double goalFinalGrade,
+    required EventItem nextEvent,
+    required double scorePercent,
+  }) {
+    final pp = nextEvent.pointsPossible;
+    final cat = nextEvent.category;
+    if (pp == null || pp <= 0) return null;
+    if (cat == null || cat.trim().isEmpty) return null;
+
+    // Create a lightweight "what-if" class snapshot:
+    // - add the hypothetical points to grades
+    // - remove that event from remaining pool
+    final earned = (scorePercent.clamp(0, 100) / 100.0) * pp;
+    final tmpGrades = [
+      ...cls.grades,
+      GradeItem(eventTitle: 'What-if: ${nextEvent.title}', category: cat, earned: earned, possible: pp),
+    ];
+    final tmpEvents = cls.events.where((e) => !(e.title == nextEvent.title && e.dueAt == nextEvent.dueAt)).toList(growable: false);
+
+    final tmp = ClassSummary(
+      id: cls.id,
+      className: cls.className,
+      categories: cls.categories,
+      events: tmpEvents,
+      grades: tmpGrades,
+      assumedRemainingAverage: cls.assumedRemainingAverage,
+    );
+
+    return _requiredAverageOnRemainingAssignments(cls: tmp, goalFinalGrade: goalFinalGrade);
+  }
+
   /// If future events have both `category` and `pointsPossible`, compute the single
   /// uniform % score needed across ALL remaining assignments (points-based) to hit the goal.
   ///

@@ -116,7 +116,7 @@ class _TabPill extends StatelessWidget {
   }
 }
 
-class _OverviewTab extends StatelessWidget {
+class _OverviewTab extends ConsumerStatefulWidget {
   final ClassSummary cls;
   final GradeSnapshot snap;
   final double goal;
@@ -124,11 +124,27 @@ class _OverviewTab extends StatelessWidget {
   const _OverviewTab({required this.cls, required this.snap, required this.goal});
 
   @override
+  ConsumerState<_OverviewTab> createState() => _OverviewTabState();
+}
+
+class _OverviewTabState extends ConsumerState<_OverviewTab> {
+  double _whatIfPct = 90;
+
+  @override
   Widget build(BuildContext context) {
-    final currentStr = snap.current == null ? '—' : '${snap.current!.toStringAsFixed(1)}%';
-    final projectedStr = snap.projected == null ? '—' : '${snap.projected!.toStringAsFixed(1)}%';
-    final reqRemaining = snap.requiredAverageOnRemainingAssignments;
-    final nextEvent = _nextPointedEvent(cls);
+    final currentStr = widget.snap.current == null ? '—' : '${widget.snap.current!.toStringAsFixed(1)}%';
+    final projectedStr = widget.snap.projected == null ? '—' : '${widget.snap.projected!.toStringAsFixed(1)}%';
+    final reqRemaining = widget.snap.requiredAverageOnRemainingAssignments;
+    final nextEvent = _nextPointedEvent(widget.cls);
+
+    final afterWhatIf = (reqRemaining != null && nextEvent != null)
+        ? GradeCalculator.requiredAverageAfterScoringNext(
+            cls: widget.cls,
+            goalFinalGrade: widget.goal,
+            nextEvent: nextEvent,
+            scorePercent: _whatIfPct,
+          )
+        : null;
 
     return ListView(
       children: [
@@ -145,6 +161,25 @@ class _OverviewTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => ref.read(appSettingsProvider.notifier).setGoalFromLetter('A'),
+                          child: Text('Target A (${ref.watch(appSettingsProvider).aCutoff.toStringAsFixed(0)}%)'),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => ref.read(appSettingsProvider.notifier).setGoalFromLetter('B'),
+                          child: Text('Target B (${ref.watch(appSettingsProvider).bCutoff.toStringAsFixed(0)}%)'),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => ref.read(appSettingsProvider.notifier).setGoalFromLetter('C'),
+                          child: Text('Target C (${ref.watch(appSettingsProvider).cCutoff.toStringAsFixed(0)}%)'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         _Metric(label: 'Current', value: currentStr),
@@ -155,10 +190,10 @@ class _OverviewTab extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       reqRemaining != null
-                          ? 'To hit ${goal.toStringAsFixed(0)}%, you need about ${reqRemaining.toStringAsFixed(1)}% across your remaining assignments (with points entered).'
-                          : (snap.requiredRemainingAverageForGoal == null
+                          ? 'To hit ${widget.goal.toStringAsFixed(0)}%, you need about ${reqRemaining.toStringAsFixed(1)}% across your remaining assignments (with points entered).'
+                          : (widget.snap.requiredRemainingAverageForGoal == null
                               ? 'Add rubric categories (via syllabus) and grades to unlock goal math.'
-                              : 'To hit ${goal.toStringAsFixed(0)}%, you need ~${snap.requiredRemainingAverageForGoal!.toStringAsFixed(1)}% on remaining categories.'),
+                              : 'To hit ${widget.goal.toStringAsFixed(0)}%, you need ~${widget.snap.requiredRemainingAverageForGoal!.toStringAsFixed(1)}% on remaining categories.'),
                       style: const TextStyle(color: YiriTheme.mutedText, height: 1.25),
                     ),
                     if (reqRemaining != null && nextEvent != null) ...[
@@ -184,6 +219,40 @@ class _OverviewTab extends StatelessWidget {
                               'Aim for ~${reqRemaining.toStringAsFixed(0)}% (≈ ${(reqRemaining / 100 * (nextEvent.pointsPossible ?? 0)).toStringAsFixed(0)} of ${(nextEvent.pointsPossible ?? 0).toStringAsFixed(0)} points).',
                               style: const TextStyle(color: YiriTheme.mutedText, height: 1.25, fontWeight: FontWeight.w800),
                             ),
+                            const SizedBox(height: 12),
+                            const Text('What-if simulator', style: TextStyle(fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 6),
+                            Text(
+                              'If you score ${_whatIfPct.toStringAsFixed(0)}% on this next assignment, your required average after that becomes:',
+                              style: const TextStyle(color: YiriTheme.mutedText, height: 1.25),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Slider(
+                                    value: _whatIfPct,
+                                    min: 0,
+                                    max: 100,
+                                    divisions: 100,
+                                    onChanged: (v) => setState(() => _whatIfPct = v),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: YiriTheme.yiriRed.withOpacity(0.10),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                                  ),
+                                  child: Text(
+                                    afterWhatIf == null ? '—' : '${afterWhatIf.toStringAsFixed(1)}%',
+                                    style: const TextStyle(fontWeight: FontWeight.w900),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -204,23 +273,23 @@ class _OverviewTab extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               ProgressRing(
-                value: (snap.projected ?? 0) / 100,
+                value: (widget.snap.projected ?? 0) / 100,
                 size: 66,
                 stroke: 8,
-                centerText: (snap.projected ?? 0).toStringAsFixed(0),
+                centerText: (widget.snap.projected ?? 0).toStringAsFixed(0),
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
-        if (cls.categories.isNotEmpty)
+        if (widget.cls.categories.isNotEmpty)
           YiriCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Rubric', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 10),
-                ...cls.categories.map(
+                ...widget.cls.categories.map(
                   (c) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
@@ -603,7 +672,17 @@ class _EventsTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                  ),
+                  FilledButton(
+                    onPressed: () => _bulkEdit(context),
+                    child: const Text('Bulk edit'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               if (cls.events.isEmpty)
                 const Text(
@@ -638,6 +717,189 @@ class _EventsTab extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _bulkEdit(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: YiriTheme.pureWhite,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) {
+        return _BulkEditEventsSheet(classId: cls.id);
+      },
+    );
+  }
+}
+
+class _BulkEditEventsSheet extends ConsumerStatefulWidget {
+  final String classId;
+
+  const _BulkEditEventsSheet({required this.classId});
+
+  @override
+  ConsumerState<_BulkEditEventsSheet> createState() => _BulkEditEventsSheetState();
+}
+
+class _BulkEditEventsSheetState extends ConsumerState<_BulkEditEventsSheet> {
+  final _points = TextEditingController();
+  final Set<String> _selectedKeys = {};
+  String _category = 'Other';
+  String? _error;
+
+  @override
+  void dispose() {
+    _points.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cls = ref.watch(classesProvider).classes.firstWhere((c) => c.id == widget.classId);
+    final busy = ref.watch(classesProvider).busy;
+    final now = DateTime.now();
+    final upcoming = cls.events.where((e) => e.dueAt.isAfter(now)).toList(growable: false)
+      ..sort((a, b) => a.dueAt.compareTo(b.dueAt));
+
+    final categories = <String>[
+      ...cls.categories.map((c) => c.name),
+      'Other',
+    ];
+    if (!categories.contains(_category)) _category = categories.isNotEmpty ? categories.first : 'Other';
+
+    String keyOf(EventItem e) => '${e.title}|${e.dueAt.toUtc().toIso8601String()}';
+
+    Future<void> apply() async {
+      final p = _points.text.trim().isEmpty ? null : double.tryParse(_points.text.trim());
+      if (p != null && p <= 0) {
+        setState(() => _error = 'Points possible must be greater than 0.');
+        return;
+      }
+      if (_selectedKeys.isEmpty) {
+        setState(() => _error = 'Select at least one event.');
+        return;
+      }
+      setState(() => _error = null);
+
+      // Update each selected event individually to keep backend merge logic simple.
+      for (final e in upcoming) {
+        if (!_selectedKeys.contains(keyOf(e))) continue;
+        await ref.read(classesProvider.notifier).updateEvent(
+              classId: cls.id,
+              event: e,
+              category: _category,
+              pointsPossible: p,
+            );
+      }
+
+      if (context.mounted) Navigator.of(context).pop();
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 18,
+        right: 18,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Bulk edit events', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _category,
+            items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(growable: false),
+            onChanged: busy ? null : (v) => setState(() => _category = v ?? _category),
+            decoration: const InputDecoration(labelText: 'Category to apply'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _points,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Points possible to apply (optional)', hintText: '100'),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ListView.separated(
+              itemCount: upcoming.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (ctx, i) {
+                final e = upcoming[i];
+                final k = keyOf(e);
+                final checked = _selectedKeys.contains(k);
+                final date = MaterialLocalizations.of(context).formatMediumDate(e.dueAt);
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: busy
+                      ? null
+                      : () => setState(() {
+                            if (checked) _selectedKeys.remove(k);
+                            else _selectedKeys.add(k);
+                          }),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: checked,
+                          onChanged: busy
+                              ? null
+                              : (v) => setState(() {
+                                    if (v == true) _selectedKeys.add(k);
+                                    else _selectedKeys.remove(k);
+                                  }),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(e.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$date${e.pointsPossible != null ? ' • ${e.pointsPossible!.toStringAsFixed(0)} pts' : ''}',
+                                style: const TextStyle(color: YiriTheme.mutedText, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w800)),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: busy ? null : apply,
+              child: Text(busy ? 'Saving…' : 'Apply to selected'),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: busy ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
