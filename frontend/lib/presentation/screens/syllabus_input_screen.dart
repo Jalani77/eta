@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/syllabus_state.dart';
+import '../theme/yiri_theme.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/yiri_card.dart';
 
@@ -35,11 +36,17 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
       child: ListView(
         children: [
-          const Text('Syllabus Input', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+          Row(
+            children: const [
+              _AccentBar(),
+              SizedBox(width: 10),
+              Text('Syllabus', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+            ],
+          ),
           const SizedBox(height: 6),
           const Text(
             'Paste your syllabus text. Yiri will extract weights + dates and schedule reminders 24h before due dates.',
-            style: TextStyle(color: Color(0xFF4B5563), height: 1.25),
+            style: TextStyle(color: YiriTheme.mutedText, height: 1.25),
           ),
           const SizedBox(height: 14),
           YiriCard(
@@ -49,19 +56,28 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
                 TextField(
                   controller: _className,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'Class name'),
+                  decoration: const InputDecoration(
+                    labelText: 'Class name',
+                    hintText: 'e.g., Calculus I',
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: _phone,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'Phone (E.164, e.g. +14155552671) — optional'),
+                  decoration: const InputDecoration(
+                    labelText: 'Phone number (optional)',
+                    hintText: '+14155552671',
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: _assumed,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Assumed average for remaining work (e.g. 85)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Assumed average for remaining work',
+                    hintText: '85',
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -71,6 +87,8 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Syllabus text',
                     alignLabelWithHint: true,
+                    hintText:
+                        'Homework 20%\nQuizzes 15%\nMidterm 25%\nFinal 40%\n\n2026-02-15 Exam 1\nFeb 20, 2026 Assignment 3',
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -89,7 +107,10 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
                 ),
                 if (state.lastResult != null) ...[
                   const SizedBox(height: 10),
-                  Text(state.lastResult!, style: const TextStyle(color: Color(0xFF065F46), fontWeight: FontWeight.w700)),
+                  Text(
+                    state.lastResult!,
+                    style: const TextStyle(color: YiriTheme.mutedText, fontWeight: FontWeight.w800),
+                  ),
                 ],
                 if (state.error != null) ...[
                   const SizedBox(height: 10),
@@ -104,6 +125,22 @@ class _SyllabusInputScreenState extends ConsumerState<SyllabusInputScreen> {
             style: TextStyle(color: Color(0xFF6B7280), height: 1.25),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AccentBar extends StatelessWidget {
+  const _AccentBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 6,
+      height: 26,
+      decoration: BoxDecoration(
+        color: YiriTheme.yiriRed,
+        borderRadius: BorderRadius.circular(20),
       ),
     );
   }

@@ -20,12 +20,7 @@ class PrimaryButton extends StatelessWidget {
       height: 52,
       width: double.infinity,
       child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: YiriTheme.yiriRed,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+        // Theme enforces the red/white CTA style; keep this lean.
         onPressed: busy ? null : onPressed,
         child: busy
             ? const SizedBox(

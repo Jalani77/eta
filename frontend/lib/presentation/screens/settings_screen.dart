@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_settings.dart';
 import '../../state/auth_state.dart';
+import '../theme/yiri_theme.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/yiri_card.dart';
 
@@ -46,7 +47,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
       child: ListView(
         children: [
-          const Text('Settings', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+          Row(
+            children: const [
+              _AccentBar(),
+              SizedBox(width: 10),
+              Text('Settings', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+            ],
+          ),
           const SizedBox(height: 14),
 
           YiriCard(
@@ -70,6 +77,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (d != null) ref.read(appSettingsProvider.notifier).setGoalFinalGrade(d);
                   },
                 ),
+                const SizedBox(height: 12),
+                Text(
+                  'Current goal: ${settings.goalFinalGrade.toStringAsFixed(0)}%',
+                  style: const TextStyle(color: YiriTheme.mutedText, fontWeight: FontWeight.w800),
+                ),
               ],
             ),
           ),
@@ -83,6 +95,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const Text('Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 10),
                 if (auth.token == null) ...[
+                  const Text(
+                    'Create an account (or sign in) to connect your dashboard to the backend.',
+                    style: TextStyle(color: YiriTheme.mutedText, height: 1.25),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
@@ -107,10 +124,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 52),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
                           onPressed: auth.busy
                               ? null
                               : () => ref.read(authProvider.notifier).register(_email.text.trim(), _password.text),
@@ -141,6 +154,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(color: Color(0xFF6B7280), height: 1.25),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AccentBar extends StatelessWidget {
+  const _AccentBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 6,
+      height: 26,
+      decoration: BoxDecoration(
+        color: YiriTheme.yiriRed,
+        borderRadius: BorderRadius.circular(20),
       ),
     );
   }

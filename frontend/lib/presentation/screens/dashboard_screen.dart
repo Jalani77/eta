@@ -6,6 +6,7 @@ import '../../state/app_settings.dart';
 import '../../state/classes_state.dart';
 import '../widgets/progress_ring.dart';
 import '../widgets/yiri_card.dart';
+import '../theme/yiri_theme.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -20,14 +21,17 @@ class DashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Dashboard',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+          Row(
+            children: const [
+              _AccentBar(),
+              SizedBox(width: 10),
+              Text('Dashboard', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+            ],
           ),
           const SizedBox(height: 6),
           const Text(
             'Your classes, current grades, and where you’re headed.',
-            style: TextStyle(color: Color(0xFF4B5563)),
+            style: TextStyle(color: YiriTheme.mutedText),
           ),
           const SizedBox(height: 14),
           Expanded(
@@ -72,12 +76,12 @@ class DashboardScreen extends ConsumerWidget {
                               if (snap.requiredRemainingAverageForGoal != null)
                                 Text(
                                   'To hit ${goal.toStringAsFixed(0)}%, you need ~${snap.requiredRemainingAverageForGoal!.toStringAsFixed(1)}% average on remaining categories.',
-                                  style: const TextStyle(color: Color(0xFF4B5563), height: 1.25),
+                                  style: const TextStyle(color: YiriTheme.mutedText, height: 1.25),
                                 )
                               else
                                 Text(
                                   'Goal calc will appear once your rubric has ungraded categories.',
-                                  style: const TextStyle(color: Color(0xFF4B5563), height: 1.25),
+                                  style: const TextStyle(color: YiriTheme.mutedText, height: 1.25),
                                 ),
                             ],
                           ),
@@ -106,6 +110,22 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+class _AccentBar extends StatelessWidget {
+  const _AccentBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 6,
+      height: 26,
+      decoration: BoxDecoration(
+        color: YiriTheme.yiriRed,
+        borderRadius: BorderRadius.circular(20),
+      ),
+    );
+  }
+}
+
 class _Metric extends StatelessWidget {
   final String label;
   final String value;
@@ -117,7 +137,7 @@ class _Metric extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+        Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w800)),
         const SizedBox(height: 2),
         Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
       ],
@@ -133,12 +153,25 @@ class _EmptyCard extends StatelessWidget {
     return YiriCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text('No classes yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text(
+        children: [
+          const Text('No classes yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          const Text(
             'Go to the Syllabus tab to paste a syllabus and generate your class cards.',
-            style: TextStyle(color: Color(0xFF4B5563), height: 1.25),
+            style: TextStyle(color: YiriTheme.mutedText, height: 1.25),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: const Text(
+              'Tip: Include lines like “Homework 20%” and dates like “2026-02-15 Exam 1”.',
+              style: TextStyle(color: Color(0xFF6B7280), height: 1.25, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
